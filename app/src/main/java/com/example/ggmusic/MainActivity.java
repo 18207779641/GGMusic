@@ -1,5 +1,6 @@
 package com.example.ggmusic;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -30,6 +31,31 @@ public class MainActivity extends AppCompatActivity {
             Manifest.permission.WRITE_EXTERNAL_STORAGE
     };
 
+
+
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        mPlaylist=findViewById(R.id.lv_playlist);
+        mContentResolver = getContentResolver();
+        mCursorAdapter = new MediaCursorAdapter(MainActivity.this);
+        mPlaylist.setAdapter(mCursorAdapter);
+
+        if (ContextCompat.checkSelfPermission(this , Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            if (ActivityCompat.shouldShowRequestPermissionRationale(
+                    MainActivity.this ,
+                    Manifest.permission.READ_EXTERNAL_STORAGE)) {
+                } else {
+                requestPermissions(PERMISSIONS_STORAGE , REQUEST_EXTERNAL_STORAGE);
+                }
+            } else {
+            initPlaylist();
+        }
+    }
+
     private void initPlaylist() {
         Cursor mCursor = mContentResolver.query(
                 MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
@@ -38,39 +64,13 @@ public class MainActivity extends AppCompatActivity {
                 SELECTION_ARGS,
                 MediaStore.Audio.Media.DEFAULT_SORT_ORDER
         );
-
-        mCursorAdapter.swapCursor(mCursor);
-        mCursorAdapter.notifyDataSetChanged();
-    }
-
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        mPlaylist=findViewById(R.id.lv_playlist);
-
-        mContentResolver = getContentResolver();
-        mCursorAdapter = new MediaCursorAdapter(MainActivity.this);
-        mPlaylist.setAdapter(mCursorAdapter);
-
-        if (ContextCompat.checkSelfPermission(this ,
-                Manifest.permission.READ_EXTERNAL_STORAGE)
-        != PackageManager.PERMISSION_GRANTED) {
-            if (ActivityCompat.shouldShowRequestPermissionRationale(
-                    MainActivity.this ,
-                    Manifest.permission.READ_EXTERNAL_STORAGE)) {
-                } else {
-                requestPermissions(PERMISSIONS_STORAGE ,
-                        REQUEST_EXTERNAL_STORAGE);
-                }
-            } else {
-            initPlaylist();
-        }
+        if(mCursor!=null){
+            mCursorAdapter.swapCursor(mCursor);
+            mCursorAdapter.notifyDataSetChanged();}
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode ,String[] permissions , int[] grantResults) {
+    public void onRequestPermissionsResult(int requestCode , @NonNull String[] permissions ,@NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         switch (requestCode) {
             case REQUEST_EXTERNAL_STORAGE:

@@ -12,8 +12,10 @@ import android.widget.TextView;
 
 public class MediaCursorAdapter extends CursorAdapter {
     private Context mContext;
-     private LayoutInflater mLayoutInflater;
+    private LayoutInflater mLayoutInflater;
+    private static final int NORMAL_LENGTH=20;
 
+    private static final String TAG=MediaCursorAdapter.class.getSimpleName();
      public MediaCursorAdapter(Context context) {
         super(context , null , 0);
         mContext = context;
@@ -41,25 +43,37 @@ public class MediaCursorAdapter extends CursorAdapter {
         return null;
         }
     @Override
-    public void bindView(View view,
-                                                     Context context , Cursor cursor) {
+    public void bindView(View view, Context context , Cursor cursor) {
         ViewHolder vh =(ViewHolder) view.getTag();
 
-        int titleIndex = cursor.getColumnIndex(
-                MediaStore.Audio.Media.TITLE);
-        int artistIndex = cursor.getColumnIndex(
-                MediaStore.Audio.Media.ARTIST);
+        int titleIndex = cursor.getColumnIndex(MediaStore.Audio.Media.TITLE);
+        int artistIndex = cursor.getColumnIndex(MediaStore.Audio.Media.ARTIST);
 
         String title = cursor.getString(titleIndex);
         String artist = cursor.getString(artistIndex);
 
         int position = cursor.getPosition();
+        int titleLength=title.length();
+        int count=cursor.getCount();
 
         if (vh != null) {
             vh.tvTitle.setText(title);
-            vh.tvArtist.setText(artist);
-            vh.tvOrder.setText(Integer.toString(position + 1));
+            if(titleLength>NORMAL_LENGTH){
+                String reTitle=title.substring(0,NORMAL_LENGTH/2)+"..."+
+                        title.substring(titleLength-NORMAL_LENGTH/2,titleLength);
+                vh.tvTitle.setText(title);
+            }
+
         }
+
+        vh.tvArtist.setText(artist);
+        vh.tvOrder.setText(Integer.toString(position + 1));
+        vh.divider.setVisibility(View.VISIBLE);
+
+        if(position==count-1){
+            vh.divider.setVisibility(View.INVISIBLE);
+        }
+
     }
 
     public class ViewHolder {
