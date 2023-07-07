@@ -18,6 +18,7 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.graphics.Bitmap;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Build;
@@ -30,6 +31,7 @@ import android.os.Message;
 import android.provider.MediaStore;
 import android.provider.Settings;
 import android.util.Log;
+import android.util.Size;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.AdapterView;
@@ -65,6 +67,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private TextView tvBottomArtist;
     private ImageView ivAlbumThumbnail;
 
+    private boolean isPlaying;
+
+
+
     public static final int UPDATE_PROGRESS = 1;
 
     private ProgressBar pbProgress;
@@ -93,68 +99,57 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private ListView.OnItemClickListener itemClickListener = new ListView.OnItemClickListener() {
         @Override
         public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-            Cursor cursor = mCursorAdapter.getCursor();
-            if (cursor != null && cursor.moveToPosition(i)) {
+            Cursor cursor=mCursorAdapter.getCursor();
+            if(cursor!=null && cursor.moveToPosition(i)){
+                int titleIndex=cursor.getColumnIndex(MediaStore.Audio.Media.TITLE);
+                int artistIndex=cursor.getColumnIndex(MediaStore.Audio.Media.ARTIST);
+                int albumIdIndex=cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM_ID);
+                int dataIndex=cursor.getColumnIndex(MediaStore.Audio.Media.DATA);
 
-                int titleIndex = cursor.getColumnIndex(
-                        MediaStore.Audio.Media.TITLE);
-                int artistIndex = cursor.getColumnIndex(
-                        MediaStore.Audio.Media.ARTIST);
-                int albumIdIndex = cursor.getColumnIndex(
-                        MediaStore.Audio.Media.ALBUM_ID);
-                int dataIndex = cursor.getColumnIndex(
-                        MediaStore.Audio.Media.DATA);
+                String title=cursor.getString(titleIndex);
+                String artist=cursor.getString(artistIndex);
+                Long albumId=cursor.getLong(albumIdIndex);
+                String data=cursor.getString(dataIndex);
 
-
-                String title = cursor.getString(titleIndex);
-                String artist = cursor.getString(artistIndex);
-                Long albumId = cursor.getLong(albumIdIndex);
-                String data = cursor.getString(dataIndex);
-
-                Uri dataUri = Uri.parse(data);
-
-                Intent serviceIntent = new Intent(MainActivity.this, MusicService.class);
-                serviceIntent.putExtra(MainActivity.DATA_URI, data);
-                serviceIntent.putExtra(MainActivity.TITLE, title);
-                serviceIntent.putExtra(MainActivity.ARTIST, artist);
-                startService(serviceIntent);
-
+                Uri dataUri= Uri.parse(data);
 
                 navigation.setVisibility(View.VISIBLE);
-
-                if (tvBottomTitle != null) {
+                if(tvBottomTitle!=null){
                     tvBottomTitle.setText(title);
                 }
-
-                if (tvBottomArtist != null) {
+                if(tvBottomArtist!=null){
                     tvBottomArtist.setText(artist);
                 }
 
-                Uri albumUri = ContentUris.withAppendedId(
-                        MediaStore.Audio.Albums.EXTERNAL_CONTENT_URI,
-                        albumId);
-
-                cursor = mContentResolver.query(
-                        albumUri,
-                        null,
-                        null,
-                        null,
-                        null);
-
-                if (cursor != null && cursor.getCount() > 0) {
-                    cursor.moveToFirst();
-                    int albumArtIndex = cursor.getColumnIndex(
-                            MediaStore.Audio.Albums.ALBUM_ART);
-                    String albumArt = cursor.getString(
-                            albumArtIndex);
-
-                    Glide.with(MainActivity.this)
-                            .load(albumArt)
-                            .into(ivAlbumThumbnail);
-                    cursor.close();
+                Uri albumUri= ContentUris.withAppendedId(MediaStore.Audio.Albums.EXTERNAL_CONTENT_URI,albumId);
+                Cursor albumCursor=mContentResolver.query(albumUri,null,null,null,null);
+                if(albumCursor!=null &&albumCursor.getCount()>0){
+                    albumCursor.moveToFirst();
+                    if(Build.VERSION.SDK_INT>=29) {
+                        Bitmap albumArtBm = null;
+                        try {
+                            albumArtBm = mContentResolver.loadThumbnail(albumUri, new Size(50, 50), null);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                        ivAlbumThumbnail.setImageBitmap(albumArtBm);
+                    }
+                    else {
+                        int albumArtIndex = albumCursor.getColumnIndex(MediaStore.Audio.Albums.ALBUM_ART);
+                        String albumArt=albumCursor.getString(albumArtIndex);
+                        Glide.with(MainActivity.this).load(albumArt).into(ivAlbumThumbnail);
+                    }
+                    albumCursor.close();
                 }
 
+                Intent serviceIntent=new Intent(MainActivity.this,MusicService.class);
+                serviceIntent.putExtra(MainActivity.DATA_URI,data);
+                serviceIntent.putExtra(MainActivity.TITLE,title);
+                serviceIntent.putExtra(MainActivity.ARTIST,artist);
+                startService(serviceIntent);
 
+                isPlaying=true;
+                ivPlay.setImageResource(R.drawable.baseline_pause_circle_outline_24);
             }
         }
 
